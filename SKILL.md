@@ -14,7 +14,7 @@ Use this skill to synchronize a Notion root page into Juzi's blog workflow:
 3. Push `articles/`, `manifest.json`, and `tree.json` to `juzi050/blog-word`.
 4. Pull that repo locally and import articles into `my-blog-manager/manager_data/drafts`.
 
-Do not use local Python requests against Notion. Do not store Notion tokens in the blog repo or the skill.
+Prefer the Codex Notion connector. If the connector cannot start and the user has supplied `NOTION_BLOG_WORD_TOKEN`, use the bundled fallback script. Do not store Notion tokens in the blog repo or the skill.
 
 ## Environment
 
@@ -41,7 +41,16 @@ Do not use local Python requests against Notion. Do not store Notion tokens in t
    - `lastEditedTime` if available
    - `content` for leaf pages
    - `children`
-4. Run:
+4. If the Notion connector is unavailable, build the same JSON input with:
+
+```powershell
+$env:NOTION_BLOG_WORD_TOKEN = [Environment]::GetEnvironmentVariable('NOTION_BLOG_WORD_TOKEN', 'User')
+python C:\Users\86136\.codex\skills\notion-blog-word-sync\scripts\fetch_notion_tree.py `
+  --root-url "https://www.notion.so/3542be2c90e98028bbd5c9c084d3fc9e" `
+  --output D:\software\juzi-blog\.cache\blog-word-source.json
+```
+
+5. Run:
 
 ```powershell
 python C:\Users\86136\.codex\skills\notion-blog-word-sync\scripts\write_blog_word_articles.py `
@@ -50,7 +59,7 @@ python C:\Users\86136\.codex\skills\notion-blog-word-sync\scripts\write_blog_wor
   --clean
 ```
 
-5. Commit and push the content repo:
+6. Commit and push the content repo:
 
 ```powershell
 git -C D:\software\juzi-blog\.cache\blog-word add .
@@ -58,7 +67,7 @@ git -C D:\software\juzi-blog\.cache\blog-word commit -m "Sync Notion archive"
 git -C D:\software\juzi-blog\.cache\blog-word push
 ```
 
-6. Pull the content repo and import drafts:
+7. Pull the content repo and import drafts:
 
 ```powershell
 git -C D:\software\juzi-blog\.cache\blog-word pull --ff-only

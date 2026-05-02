@@ -138,7 +138,7 @@ def build_exports(
     article_path = articles_dir.joinpath(*[sanitize_part(p) for p in parent_path], f"{slug}.md")
     article_path.parent.mkdir(parents=True, exist_ok=True)
 
-    tags = ["Notion", *parent_path]
+    tags = parent_path or ["未分类"]
     fm = {
         "title": title,
         "date": date,

@@ -16,6 +16,10 @@ Use this skill to synchronize a Notion root page into Juzi's blog workflow:
 
 Do not use local Python requests against Notion. Do not store Notion tokens in the blog repo or the skill.
 
+## Environment
+
+- `NOTION_BLOG_WORD_TOKEN`: optional local Notion integration token supplied by the user. Read it from the process/user environment only. Never write the token value into Skill files, repo files, generated Markdown, logs, or commits.
+
 ## Default Paths
 
 - Blog workspace: `D:\software\juzi-blog`

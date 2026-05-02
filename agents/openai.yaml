@@ -1,0 +1,4 @@
+interface:
+  display_name: "Notion Blog Word Sync"
+  short_description: "Sync Notion pages into Juzi blog drafts."
+  default_prompt: "Sync a Notion page tree into blog-word and import it into Juzi blog drafts."

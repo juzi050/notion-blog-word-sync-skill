@@ -4,6 +4,7 @@ import argparse
 import html
 import json
 import re
+import shutil
 import time
 from pathlib import Path
 from typing import Any
@@ -56,6 +57,30 @@ def markdown_to_html(body: str) -> str:
     escaped = html.escape(body)
     paragraphs = [p.strip() for p in re.split(r"\n\s*\n", escaped) if p.strip()]
     return "\n".join(f"<p>{p.replace(chr(10), '<br>')}</p>" for p in paragraphs)
+
+
+def differs_without_last_modified(existing_path: Path, next_draft: dict[str, Any]) -> bool:
+    if not existing_path.exists():
+        return False
+    try:
+        current = json.loads(existing_path.read_text(encoding="utf-8"))
+    except Exception:
+        return True
+    current.pop("lastModified", None)
+    comparable_next = dict(next_draft)
+    comparable_next.pop("lastModified", None)
+    return current != comparable_next
+
+
+def backup_existing_draft(draft_path: Path) -> Path | None:
+    if not draft_path.exists():
+        return None
+    backups_dir = draft_path.parents[1] / "draft_backups"
+    backups_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = time.strftime("%Y%m%d_%H%M%S")
+    backup_path = backups_dir / f"{draft_path.stem}_{timestamp}_before_notion_import.json"
+    shutil.copy2(draft_path, backup_path)
+    return backup_path
 
 
 def main() -> int:
@@ -111,7 +136,10 @@ def main() -> int:
             elif key in item:
                 draft[key] = item[key]
 
-        (drafts_dir / f"{slug}.json").write_text(json.dumps(draft, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        draft_path = drafts_dir / f"{slug}.json"
+        if differs_without_last_modified(draft_path, draft):
+            backup_existing_draft(draft_path)
+        draft_path.write_text(json.dumps(draft, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         imported.append(slug)
 
     print(json.dumps({"success": True, "imported": imported, "skipped": skipped}, ensure_ascii=False))

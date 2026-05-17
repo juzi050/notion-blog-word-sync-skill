@@ -9,12 +9,13 @@ description: Sync a Notion page tree into the juzi050/blog-word GitHub repo as M
 
 Use this skill to synchronize a Notion root page into Juzi's blog workflow:
 
-1. Fetch the Notion page tree with the Codex Notion connector.
+1. Fetch the Notion page tree from the published public Blog page when possible, otherwise use the Codex Notion connector or the token fallback.
 2. Convert only leaf pages to Markdown articles.
 3. Push `articles/`, `manifest.json`, and `tree.json` to `juzi050/blog-word`.
 4. Pull that repo locally and import articles into `my-blog-manager/manager_data/drafts`.
+5. Preserve public Notion page images when exporting leaf articles, and mirror them to the configured Juzi OSS image bed when available.
 
-Prefer the Codex Notion connector. If the connector cannot start and the user has supplied `NOTION_BLOG_WORD_TOKEN`, use the bundled fallback script. Do not store Notion tokens in the blog repo or the skill.
+Prefer the published public Blog URL when the original `www.notion.so` URL is unavailable to the integration. Otherwise prefer the Codex Notion connector. If the connector cannot start and the user has supplied `NOTION_BLOG_WORD_TOKEN`, use the bundled fallback script. Do not store Notion tokens in the blog repo or the skill.
 
 ## Environment
 
@@ -25,41 +26,45 @@ Prefer the Codex Notion connector. If the connector cannot start and the user ha
 - Blog workspace: `D:\software\juzi-blog`
 - Content cache: `D:\software\juzi-blog\.cache\blog-word`
 - Content repo: `https://github.com/juzi050/blog-word`
+- Public Blog URL: `https://saber-storm-523.notion.site/Blog-b528860c657a83ea858301631a850a1c`
 - Drafts directory: `D:\software\juzi-blog\my-blog-manager\manager_data\drafts`
+- OSS image bed config: `D:\software\juzi-blog\my-blog-manager\data\picbed_config.local.json`
 - Published post checks:
   - `D:\software\juzi-blog\my-blog-manager\posts`
   - `D:\software\juzi-blog\XHBlogs\posts`
 
 ## Workflow
 
-1. Use the Notion connector `fetch` tool on the user-provided root page URL.
-2. Recursively fetch child pages referenced by `<page url="...">` tags.
-3. Build a JSON input tree with each node:
+1. Prefer the public Blog URL (`https://saber-storm-523.notion.site/Blog-b528860c657a83ea858301631a850a1c`) when the original `www.notion.so` URL is unavailable to the integration.
+2. Use the Notion connector `fetch` tool on the selected root page URL.
+3. Recursively fetch child pages referenced by `<page url="...">` tags.
+4. Build a JSON input tree with each node:
    - `id`
    - `title`
    - `url`
    - `lastEditedTime` if available
    - `content` for leaf pages
    - `children`
-4. If the Notion connector is unavailable, build the same JSON input with:
+5. If the Notion connector is unavailable and the page is shared with the integration, build the same JSON input with:
 
 ```powershell
 $env:NOTION_BLOG_WORD_TOKEN = [Environment]::GetEnvironmentVariable('NOTION_BLOG_WORD_TOKEN', 'User')
 python C:\Users\86136\.codex\skills\notion-blog-word-sync\scripts\fetch_notion_tree.py `
-  --root-url "https://www.notion.so/3542be2c90e98028bbd5c9c084d3fc9e" `
+  --root-url "https://saber-storm-523.notion.site/Blog-b528860c657a83ea858301631a850a1c" `
   --output D:\software\juzi-blog\.cache\blog-word-source.json
 ```
 
-5. Run:
+6. Run:
 
 ```powershell
 python C:\Users\86136\.codex\skills\notion-blog-word-sync\scripts\write_blog_word_articles.py `
   --input D:\software\juzi-blog\.cache\blog-word-source.json `
   --repo D:\software\juzi-blog\.cache\blog-word `
+  --manager-root D:\software\juzi-blog\my-blog-manager `
   --clean
 ```
 
-6. Commit and push the content repo:
+7. Commit and push the content repo:
 
 ```powershell
 git -C D:\software\juzi-blog\.cache\blog-word add .
@@ -67,7 +72,7 @@ git -C D:\software\juzi-blog\.cache\blog-word commit -m "Sync Notion archive"
 git -C D:\software\juzi-blog\.cache\blog-word push
 ```
 
-7. Pull the content repo and import drafts:
+8. Pull the content repo and import drafts:
 
 ```powershell
 git -C D:\software\juzi-blog\.cache\blog-word pull --ff-only
@@ -83,6 +88,7 @@ python C:\Users\86136\.codex\skills\notion-blog-word-sync\scripts\import_blog_wo
 - Pages without child pages become Markdown articles.
 - Article slug is `notion-<last-12-normalized-page-id-chars>`.
 - Article path is `articles/<Notion directory path>/<slug>.md`.
+- Public Notion image links in article Markdown should be mirrored to the configured OSS image bed when `--manager-root` or `--picbed-config` is available; otherwise keep the original Notion image URL.
 - Frontmatter must include:
   - `title`
   - `date`
